@@ -5,107 +5,113 @@
 /*                                                    +:+ +:+         +:+     */
 /*   By: dmontoya <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2017/10/23 17:14:04 by dmontoya          #+#    #+#             */
-/*   Updated: 2017/10/25 19:44:01 by dmontoya         ###   ########.fr       */
+/*   Created: 2017/11/02 01:52:35 by dmontoya          #+#    #+#             */
+/*   Updated: 2017/11/03 14:00:51 by dmontoya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "get_next_line.h"
 
-char	*save_rest(char *temp, char *buf, int i)
+void	save(char **temp, char *buf, int i, int ret)
 {
-	free(temp);
-	temp = ft_strsub(buf, i, BUFF_SIZE - i);
-	return (temp);
+	if (i == ret)
+	{
+		if (temp != 0)
+			ft_strdel(temp);
+		return ;
+	}
+	*temp = ft_strsub(buf, i, ret - i);
 }
 
-int		found_newline(char **line, char **temp, char **buf, int i)
+int		found_nl(char **line, char **temp, char *buf, int i)
 {
+	char *temp2;
+	char *temp3;
+
+	if (buf[i] != '\n')
+		return (-1);
 	if (!*line)
-	{
-		if (*temp != 0)
-		{
-			*line = ft_strjoin(*temp, ft_strsub(*buf, 0, i));
-			free(*temp);
-		}
-		else
-			*line = ft_strsub(*buf, 0, i);
-	}
+		*line = ft_strsub(buf, 0, i);
 	else
-		*line = ft_strjoin(*line, ft_strsub(*buf, 0, i));
-	if (i + 1 != BUFF_SIZE)
-		*temp = save_rest(*temp, *buf, i + 1);
-	free(*buf);
+	{
+		temp2 = ft_strsub(buf, 0, i);
+		temp3 = *line;
+		*line = ft_strjoin(*line, temp2);
+		ft_strdel(&temp2);
+		ft_strdel(&temp3);
+	}
+	save(temp, buf, i + 1, ft_strlen(buf));
 	return (1);
 }
 
-void	save_n_continue(char **line, char **temp, char *buf)
+void	save_and_cont(char **line, char *buf, int ret)
 {
+	char *temp2;
+	char *temp3;
+
 	if (!*line)
-	{
-		if (*temp != 0)
-		{
-			*line = ft_strjoin(*temp, buf);
-			free(*temp);
-		}
-		else
-			*line = ft_strdup(buf);
-	}
+		*line = ft_strsub(buf, 0, ret);
 	else
-		*line = ft_strjoin(*line, buf);
+	{
+		temp3 = *line;
+		temp2 = ft_strsub(buf, 0, ret);
+		*line = ft_strjoin(*line, temp2);
+		ft_strdel(&temp2);
+		ft_strdel(&temp3);
+	}
 }
 
-int		checktemp(char **temp, char **line)
+int		checktemp(char **temp, char **line, int ret)
 {
 	int i;
-	int tlen;
 
 	i = -1;
-	tlen = ft_strlen(*temp);
-	if (!*temp)
-		return (0);
+	if (ret == 0)
+		return (1);
 	while (temp[0][++i] != '\0')
 	{
 		if (temp[0][i] == '\n')
 		{
 			*line = ft_strsub(*temp, 0, i);
-			*temp = ft_strsub(*temp, i + 1, tlen - (i + 1));
+			save(temp, *temp, i + 1, ft_strlen(*temp));
+			return (1);
+		}
+		if (temp[0][i + 1] == '\0' && ret == 0)
+		{
+			*line = ft_strdup(*temp);
 			return (1);
 		}
 	}
+	*line = ft_strdup(*temp);
+	ft_strdel(temp);
 	return (0);
 }
 
 int		get_next_line(const int fd, char **line)
 {
-	char			*buf;
+	char			buf[BUFF_SIZE + 1];
 	static	char	*temp;
 	int				i;
+	int				ret;
 
-	if (!fd || !line || BUFF_SIZE == 0)
+	if (fd < 0 || !line)
 		return (-1);
+	*line = ft_strnew(0);
 	if (temp != 0)
-		if (checktemp(&temp, line) == 1)
+		if (checktemp(&temp, line, 1) == 1)
 			return (1);
-	buf = (char *)malloc(sizeof(char) * BUFF_SIZE);
-	read(fd, buf, BUFF_SIZE);
-	i = -1;
-	while (++i < BUFF_SIZE)
+	while ((ret = read(fd, buf, BUFF_SIZE)) > 0)
 	{
-		if (buf[i] == '\n')
-			return (found_newline(line, &temp, &buf, i));
-		if (i + 1 == BUFF_SIZE)
-		{
-			save_n_continue(line, &temp, buf);
-			read(fd, buf, BUFF_SIZE);
-			i = -1;
-		}
+		i = -1;
+		buf[ret] = '\0';
+		while (++i < ret)
+			if (found_nl(line, &temp, buf, i) == 1)
+				return (1);
+		save_and_cont(line, buf, ret);
 	}
-	return (1);
+	if (ret < 0)
+		return (-1);
+	if (checktemp(&temp, line, ret) == 1 && ft_strlen(*line) > 0)
+		return (1);
+	return (0);
 }
-
-
-
-
-
-
