@@ -6,7 +6,7 @@
 /*   By: dmontoya <marvin@42.fr>                    +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2017/11/02 01:52:35 by dmontoya          #+#    #+#             */
-/*   Updated: 2017/11/03 14:00:51 by dmontoya         ###   ########.fr       */
+/*   Updated: 2017/11/04 16:26:49 by dmontoya         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -16,8 +16,8 @@ void	save(char **temp, char *buf, int i, int ret)
 {
 	if (i == ret)
 	{
-		if (temp != 0)
-			ft_strdel(temp);
+		if (*temp != 0)
+			ft_strdel(&*temp);
 		return ;
 	}
 	*temp = ft_strsub(buf, i, ret - i);
@@ -61,57 +61,57 @@ void	save_and_cont(char **line, char *buf, int ret)
 	}
 }
 
-int		checktemp(char **temp, char **line, int ret)
+int		checktemp(int fd, char **temp, char **line, int ret)
 {
 	int i;
 
 	i = -1;
 	if (ret == 0)
 		return (1);
-	while (temp[0][++i] != '\0')
+	while (temp[fd][++i] != '\0')
 	{
-		if (temp[0][i] == '\n')
+		if (temp[fd][i] == '\n')
 		{
-			*line = ft_strsub(*temp, 0, i);
-			save(temp, *temp, i + 1, ft_strlen(*temp));
+			*line = ft_strsub(temp[fd], 0, i);
+			save(&temp[fd], temp[fd], i + 1, ft_strlen(temp[fd]));
 			return (1);
 		}
-		if (temp[0][i + 1] == '\0' && ret == 0)
+		if (temp[fd][i + 1] == '\0' && ret == 0)
 		{
-			*line = ft_strdup(*temp);
+			*line = ft_strdup(temp[fd]);
 			return (1);
 		}
 	}
-	*line = ft_strdup(*temp);
-	ft_strdel(temp);
+	*line = ft_strdup(temp[fd]);
+	ft_strdel(&temp[fd]);
 	return (0);
 }
 
 int		get_next_line(const int fd, char **line)
 {
 	char			buf[BUFF_SIZE + 1];
-	static	char	*temp;
+	static	char	*temp[255];
 	int				i;
 	int				ret;
 
 	if (fd < 0 || !line)
 		return (-1);
 	*line = ft_strnew(0);
-	if (temp != 0)
-		if (checktemp(&temp, line, 1) == 1)
+	if (temp[fd] != 0)
+		if (checktemp(fd, temp, line, 1) == 1)
 			return (1);
 	while ((ret = read(fd, buf, BUFF_SIZE)) > 0)
 	{
 		i = -1;
 		buf[ret] = '\0';
 		while (++i < ret)
-			if (found_nl(line, &temp, buf, i) == 1)
+			if (found_nl(line, &temp[fd], buf, i) == 1)
 				return (1);
 		save_and_cont(line, buf, ret);
 	}
 	if (ret < 0)
 		return (-1);
-	if (checktemp(&temp, line, ret) == 1 && ft_strlen(*line) > 0)
+	if (checktemp(fd, temp, line, ret) == 1 && ft_strlen(*line) > 0)
 		return (1);
 	return (0);
 }
